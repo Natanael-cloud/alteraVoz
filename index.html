@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,7 +13,6 @@
         <button id="pararGravacao" disabled>Parar Gravação</button>
         <button id="descartarGravacao" disabled>Descartar Gravação</button>
 
-        <!-- Display do tempo de gravação -->
         <p id="tempoGravacao">Tempo de gravação: 00:00</p>
 
         <canvas id="displayAudio" width="300" height="50"></canvas>
@@ -26,6 +25,12 @@
         
         <label for="agudo">Agudo:</label>
         <input type="range" id="agudo" min="-20" max="20" step="1" value="0">
+        
+        <!-- Opção de voz robótica -->
+        <label>
+            <input type="checkbox" id="vozRobotica">
+            Voz Robótica
+        </label>
 
         <audio id="playerAudio" controls></audio>
         <button id="baixarAudio" disabled>Baixar Áudio</button>
