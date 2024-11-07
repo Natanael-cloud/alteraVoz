@@ -1,134 +1,167 @@
-// Variáveis principais para gravador de áudio, dados de áudio e display
-let gravador; // Objeto para controlar a gravação de áudio
-let blocosAudio = []; // Array para armazenar os fragmentos de áudio gravados
-let blobAudio; // Objeto Blob que conterá o áudio completo
-let urlAudio; // URL temporária para reproduzir o áudio
-let animacaoDisplay; // Armazena o ID da animação para controle do display de áudio
+let gravador;
+let blocosAudio = [];
+let blobAudio;
+let urlAudio;
+let animacaoDisplay;
+let intervaloTempo;
+let segundosGravacao = 0;
 
-// Referências aos elementos de áudio e botões do HTML
-const playerAudio = document.getElementById("playerAudio"); // Elemento de áudio para reprodução
-const botaoBaixar = document.getElementById("baixarAudio"); // Botão para baixar o áudio
-const botaoDescartar = document.getElementById("descartarGravacao"); // Botão para descartar o áudio
+const playerAudio = document.getElementById("playerAudio");
+const botaoBaixar = document.getElementById("baixarAudio");
+const botaoDescartar = document.getElementById("descartarGravacao");
+const displayAudio = document.getElementById("displayAudio");
+const contextoDisplay = displayAudio.getContext("2d");
+const tempoGravacao = document.getElementById("tempoGravacao");
 
-// Configuração do display de visualização do áudio
-const displayAudio = document.getElementById("displayAudio"); // Canvas para mostrar os níveis de áudio
-const contextoDisplay = displayAudio.getContext("2d"); // Contexto 2D para desenhar no canvas
+const contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
+const filtroGrave = contextoAudio.createBiquadFilter();
+const filtroAgudo = contextoAudio.createBiquadFilter();
+filtroGrave.type = "lowshelf";
+filtroAgudo.type = "highshelf";
 
-// Configuração do contexto de áudio e filtros de graves e agudos
-const contextoAudio = new (window.AudioContext || window.webkitAudioContext)(); // Cria o contexto de áudio para manipulação do som
-const filtroGrave = contextoAudio.createBiquadFilter(); // Filtro para ajuste de graves
-const filtroAgudo = contextoAudio.createBiquadFilter(); // Filtro para ajuste de agudos
+let vozRoboticaAtiva = false;
 
-// Define o tipo dos filtros
-filtroGrave.type = "lowshelf"; // Filtro de baixa frequência para graves
-filtroAgudo.type = "highshelf"; // Filtro de alta frequência para agudos
-
-// Inicia a gravação ao clicar no botão "Iniciar Gravação"
 document.getElementById("iniciarGravacao").addEventListener("click", async () => {
-    // Solicita permissão para capturar o áudio do microfone
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const fonteAudio = contextoAudio.createMediaStreamSource(stream); // Fonte de áudio vinda do microfone
-    const analisador = contextoAudio.createAnalyser(); // Cria o analisador para capturar dados de frequência
-    analisador.fftSize = 256; // Define a resolução da análise de áudio
+    const fonteAudio = contextoAudio.createMediaStreamSource(stream);
+    const analisador = contextoAudio.createAnalyser();
+    analisador.fftSize = 256;
 
-    // Conecta a fonte de áudio aos filtros e ao analisador
     fonteAudio.connect(filtroGrave).connect(filtroAgudo).connect(analisador);
-
-    // Inicia a animação para mostrar o nível de áudio no display
     animacaoDisplay = requestAnimationFrame(() => desenharDisplay(analisador));
 
-    // Inicializa o MediaRecorder com o stream de áudio
-    gravador = new MediaRecorder(stream);
+    segundosGravacao = 0;
+    atualizarTempoGravacao();
+    intervaloTempo = setInterval(() => {
+        segundosGravacao++;
+        atualizarTempoGravacao();
+    }, 1000);
 
-    // Evento que armazena os dados de áudio quando disponíveis
+    gravador = new MediaRecorder(stream);
     gravador.ondataavailable = event => {
-        blocosAudio.push(event.data); // Adiciona cada fragmento de áudio ao array
+        blocosAudio.push(event.data);
     };
 
-    // Evento que ocorre quando a gravação é finalizada
-    gravador.onstop = () => {
-        // Cria um Blob com os dados de áudio e gera uma URL para reprodução
+    gravador.onstop = async () => {
         blobAudio = new Blob(blocosAudio, { type: "audio/wav" });
         urlAudio = URL.createObjectURL(blobAudio);
-        playerAudio.src = urlAudio; // Define a URL no player para permitir a reprodução
-        botaoBaixar.disabled = false; // Habilita o botão de download
-        blocosAudio = []; // Limpa o array de fragmentos de áudio para a próxima gravação
+        await processarAudioComFiltros(blobAudio);
+        botaoBaixar.disabled = false;
+        blocosAudio = [];
     };
 
-    // Inicia a gravação
     gravador.start();
-    document.getElementById("iniciarGravacao").disabled = true; // Desabilita o botão "Iniciar Gravação"
-    document.getElementById("pararGravacao").disabled = false; // Habilita o botão "Parar Gravação"
-    botaoDescartar.disabled = false; // Habilita o botão "Descartar Gravação"
+    document.getElementById("iniciarGravacao").disabled = true;
+    document.getElementById("pararGravacao").disabled = false;
+    botaoDescartar.disabled = false;
 });
 
-// Para a gravação ao clicar no botão "Parar Gravação"
 document.getElementById("pararGravacao").addEventListener("click", () => {
-    gravador.stop(); // Finaliza a gravação
-    cancelAnimationFrame(animacaoDisplay); // Para a animação do display de áudio
-    limparDisplay(); // Limpa o display de áudio
-    document.getElementById("iniciarGravacao").disabled = false; // Habilita o botão "Iniciar Gravação"
-    document.getElementById("pararGravacao").disabled = true; // Desabilita o botão "Parar Gravação"
+    gravador.stop();
+    cancelAnimationFrame(animacaoDisplay);
+    limparDisplay();
+    clearInterval(intervaloTempo);
+    document.getElementById("iniciarGravacao").disabled = false;
+    document.getElementById("pararGravacao").disabled = true;
 });
 
-// Descartar a gravação ao clicar no botão "Descartar Gravação"
 botaoDescartar.addEventListener("click", () => {
-    blocosAudio = []; // Limpa os dados de áudio
-    urlAudio = null; // Remove a URL de áudio
-    playerAudio.src = ""; // Reseta o player de áudio
-    botaoBaixar.disabled = true; // Desabilita o botão de download
-    botaoDescartar.disabled = true; // Desabilita o botão de descartar
-    limparDisplay(); // Limpa o display de áudio
+    blocosAudio = [];
+    urlAudio = null;
+    playerAudio.src = "";
+    botaoBaixar.disabled = true;
+    botaoDescartar.disabled = true;
+    limparDisplay();
+    clearInterval(intervaloTempo);
+    segundosGravacao = 0;
+    atualizarTempoGravacao();
 });
 
-// Controla a velocidade de reprodução do áudio
 document.getElementById("velocidade").addEventListener("input", (evento) => {
-    playerAudio.playbackRate = evento.target.value; // Ajusta a taxa de reprodução
+    playerAudio.playbackRate = evento.target.value;
 });
 
-// Controla o filtro de graves com base no controle deslizante
 document.getElementById("grave").addEventListener("input", (evento) => {
-    filtroGrave.frequency.value = 200; // Define a frequência de corte para o filtro de graves
-    filtroGrave.gain.value = evento.target.value; // Ajusta o ganho do filtro de graves
+    filtroGrave.frequency.value = 200;
+    filtroGrave.gain.value = evento.target.value;
 });
 
-// Controla o filtro de agudos com base no controle deslizante
 document.getElementById("agudo").addEventListener("input", (evento) => {
-    filtroAgudo.frequency.value = 2000; // Define a frequência de corte para o filtro de agudos
-    filtroAgudo.gain.value = evento.target.value; // Ajusta o ganho do filtro de agudos
+    filtroAgudo.frequency.value = 2000;
+    filtroAgudo.gain.value = evento.target.value;
 });
 
-// Baixa o áudio gravado ao clicar no botão "Baixar Áudio"
+document.getElementById("vozRobotica").addEventListener("change", (evento) => {
+    vozRoboticaAtiva = evento.target.checked;
+});
+
 botaoBaixar.addEventListener("click", () => {
-    const a = document.createElement("a"); // Cria um elemento de link
-    a.href = urlAudio; // Define o URL do áudio como destino do link
-    a.download = "audio_gravado.wav"; // Define o nome do arquivo para download
-    document.body.appendChild(a); // Adiciona o link ao documento
-    a.click(); // Simula um clique para iniciar o download
-    document.body.removeChild(a); // Remove o link do documento após o download
+    const a = document.createElement("a");
+    a.href = urlAudio;
+    a.download = "audio_gravado.wav";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 });
 
-// Função para desenhar o display do áudio, visualizando o volume do áudio capturado
 function desenharDisplay(analisador) {
-    const dadosAudio = new Uint8Array(analisador.frequencyBinCount); // Array para armazenar os dados de frequência
-    analisador.getByteFrequencyData(dadosAudio); // Popula o array com os dados de áudio
+    const dadosAudio = new Uint8Array(analisador.frequencyBinCount);
+    analisador.getByteFrequencyData(dadosAudio);
 
-    contextoDisplay.clearRect(0, 0, displayAudio.width, displayAudio.height); // Limpa o display antes de desenhar
+    contextoDisplay.clearRect(0, 0, displayAudio.width, displayAudio.height);
 
-    // Desenha cada barra no display, representando os níveis de áudio
     const larguraBarra = displayAudio.width / dadosAudio.length;
     dadosAudio.forEach((valor, i) => {
-        const alturaBarra = valor / 2; // Ajusta a altura da barra
-        const x = i * larguraBarra; // Calcula a posição X da barra
-        contextoDisplay.fillStyle = "#4CAF50"; // Define a cor da barra
-        contextoDisplay.fillRect(x, displayAudio.height - alturaBarra, larguraBarra, alturaBarra); // Desenha a barra
+        const alturaBarra = valor / 2;
+        const x = i * larguraBarra;
+        contextoDisplay.fillStyle = "#4CAF50";
+        contextoDisplay.fillRect(x, displayAudio.height - alturaBarra, larguraBarra, alturaBarra);
     });
 
-    animacaoDisplay = requestAnimationFrame(() => desenharDisplay(analisador)); // Continua a animação do display
+    animacaoDisplay = requestAnimationFrame(() => desenharDisplay(analisador));
 }
 
-// Função para limpar o display de áudio
 function limparDisplay() {
-    contextoDisplay.clearRect(0, 0, displayAudio.width, displayAudio.height); // Limpa o display de áudio
+    contextoDisplay.clearRect(0, 0, displayAudio.width, displayAudio.height);
 }
+
+function atualizarTempoGravacao() {
+    const minutos = Math.floor(segundosGravacao / 60);
+    const segundos = segundosGravacao % 60;
+    tempoGravacao.textContent = `Tempo de gravação: ${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+}
+
+async function processarAudioComFiltros(blob) {
+    const arrayBuffer = await blob.arrayBuffer();
+    const buffer = await contextoAudio.decodeAudioData(arrayBuffer);
+
+    const bufferSource = contextoAudio.createBufferSource();
+    bufferSource.buffer = buffer;
+
+    if (vozRoboticaAtiva) {
+        const oscilador = contextoAudio.createOscillator();
+        oscilador.type = "square"; // Onda quadrada para efeito robótico
+        oscilador.frequency.value = 40; // Frequência baixa para um efeito robótico característico
+
+        const ganhoOscilador = contextoAudio.createGain();
+        ganhoOscilador.gain.value = 0.5;
+
+        oscilador.connect(ganhoOscilador).connect(filtroGrave).connect(filtroAgudo).connect(contextoAudio.destination);
+        oscilador.start();
+        bufferSource.connect(ganhoOscilador);
+        
+        bufferSource.start();
+        bufferSource.onended = () => {
+            oscilador.stop();
+            playerAudio.src = urlAudio;
+        };
+    } else {
+        bufferSource.connect(filtroGrave).connect(filtroAgudo).connect(contextoAudio.destination);
+        bufferSource.start();
+        bufferSource.onended = () => {
+            playerAudio.src = urlAudio;
+        };
+    }
+}
+
 
