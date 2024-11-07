@@ -13,9 +13,11 @@
         <button id="pararGravacao" disabled>Parar Gravação</button>
         <button id="descartarGravacao" disabled>Descartar Gravação</button>
 
-        <!-- Display de visualização do áudio -->
+        <!-- Display do tempo de gravação -->
+        <p id="tempoGravacao">Tempo de gravação: 00:00</p>
+
         <canvas id="displayAudio" width="300" height="50"></canvas>
-        
+
         <label for="velocidade">Velocidade da Voz:</label>
         <input type="range" id="velocidade" min="0.5" max="2" step="0.1" value="1">
         
@@ -32,4 +34,5 @@
     <script src="index.js"></script>
 </body>
 </html>
+
 
