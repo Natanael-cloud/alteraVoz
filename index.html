@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +11,11 @@
         <h1>Gravador de Voz com Efeitos</h1>
         <button id="iniciarGravacao">Iniciar Gravação</button>
         <button id="pararGravacao" disabled>Parar Gravação</button>
+        <button id="descartarGravacao" disabled>Descartar Gravação</button>
 
+        <!-- Display de visualização do áudio -->
+        <canvas id="displayAudio" width="300" height="50"></canvas>
+        
         <label for="velocidade">Velocidade da Voz:</label>
         <input type="range" id="velocidade" min="0.5" max="2" step="0.1" value="1">
         
@@ -28,3 +32,4 @@
     <script src="index.js"></script>
 </body>
 </html>
+
