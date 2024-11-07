@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravador de Voz com Efeitos</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  
+    <div class="container">
+        <h1>Gravador de Voz com Efeitos</h1>
+        <button id="iniciarGravacao">Iniciar Gravação</button>
+        <button id="pararGravacao" disabled>Parar Gravação</button>
+
+        <label for="velocidade">Velocidade da Voz:</label>
+        <input type="range" id="velocidade" min="0.5" max="2" step="0.1" value="1">
+        
+        <label for="grave">Grave:</label>
+        <input type="range" id="grave" min="-20" max="20" step="1" value="0">
+        
+        <label for="agudo">Agudo:</label>
+        <input type="range" id="agudo" min="-20" max="20" step="1" value="0">
+
+        <audio id="playerAudio" controls></audio>
+        <button id="baixarAudio" disabled>Baixar Áudio</button>
+    </div>
+
+    <script src="index.js"></script>
 </body>
 </html>
